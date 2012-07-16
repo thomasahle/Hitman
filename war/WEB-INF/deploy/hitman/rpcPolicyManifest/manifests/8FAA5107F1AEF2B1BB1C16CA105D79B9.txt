@@ -1,0 +1,2 @@
+serviceClass: dk.hitman.hitman2012.client.GreetingService
+path: ECD31CE0FD64DDB5B563BE8E8C71E8B5.gwt.rpc
