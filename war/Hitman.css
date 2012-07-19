@@ -37,9 +37,10 @@ h1 {
 
 .gwt-DropPanel {
 	display:block;
-	width:100px;
-	height:100px;
 	border: 1px solid black;
+	padding:10px;
+	color:grey;
+	box-sizing:border-box;
 }
 .mainflow {
 	position:relative;
@@ -47,5 +48,27 @@ h1 {
 body {
 height:100%;
 }
-html {height:100%
+html {height:100%;overflow:hidden;
+}
+.heading {
+  font-size: 2em;
+  font-weight: bold;
+  color: #777777;
+  margin: 40px 0px 70px;
+  text-align: center;
+
+}
+.regPanel {
+
+}
+.table {
+}
+.gwt-TabLayoutPanelContentContainer > div {
+	overflow:auto !important;
+}
+.killer:after {
+content: " ➸ ";
+}
+drag_hovered {
+border-color:blue;
 }
