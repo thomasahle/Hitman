@@ -1,19 +1,19 @@
 package dk.hitman.hitman2012.client;
 
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
+import com.google.gwt.cell.client.Cell.Context;
 import com.google.gwt.cell.client.EditTextCell;
+import com.google.gwt.cell.client.FieldUpdater;
 import com.google.gwt.cell.client.NumberCell;
+import com.google.gwt.cell.client.ValueUpdater;
+import com.google.gwt.dom.client.Element;
+import com.google.gwt.dom.client.NativeEvent;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.event.dom.client.KeyCodes;
 import com.google.gwt.event.dom.client.KeyPressEvent;
 import com.google.gwt.event.dom.client.KeyPressHandler;
-import com.google.gwt.event.shared.GwtEvent;
-import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.user.cellview.client.CellTable;
 import com.google.gwt.user.cellview.client.Column;
 import com.google.gwt.user.cellview.client.ColumnSortEvent.ListHandler;
@@ -24,10 +24,6 @@ import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.Panel;
 import com.google.gwt.user.client.ui.TextBox;
 import com.google.gwt.user.client.ui.VerticalPanel;
-import com.google.gwt.view.client.HasData;
-import com.google.gwt.view.client.Range;
-import com.google.gwt.view.client.RangeChangeEvent.Handler;
-import com.google.gwt.view.client.SelectionModel;
 
 import dk.hitman.hitman2012.shared.Pair;
 
@@ -75,16 +71,16 @@ public class Registrering implements Content {
 		cellTable.addColumn(column_id, "ID");
 		cellTable.setColumnWidth(column_id, "4em");
 
-		Column<Reg, String> column_2 = new Column<Reg, String>(
+		Column<Reg, String> column_name = new Column<Reg, String>(
 				new EditTextCell()) {
 			@Override
 			public String getValue(Reg reg) {
 				return reg.navn;
 			}
 		};
-		column_2.setSortable(true);
-		cellTable.addColumn(column_2, "Name");
-		cellTable.setColumnWidth(column_2, "25%");
+		column_name.setSortable(true);
+		cellTable.addColumn(column_name, "Name");
+		cellTable.setColumnWidth(column_name, "25%");
 
 		Column<Reg, String> column_g = new Column<Reg, String>(
 				new EditTextCell()) {
@@ -107,52 +103,72 @@ public class Registrering implements Content {
 		cellTable.addColumn(column_k, "Kvarter");
 		cellTable.setColumnWidth(column_k, "25%");
 
-		Column<Reg, String> column_3 = new Column<Reg, String>(
+		Column<Reg, String> column_bydel = new Column<Reg, String>(
 				new EditTextCell()) {
 			@Override
 			public String getValue(Reg reg) {
-				return reg.bydel;
+				return (String) reg.bydel;
 			}
 		};
-		column_3.setSortable(true);
-		cellTable.addColumn(column_3, "Bydel");
-		cellTable.setColumnWidth(column_3, "25%");
+		column_bydel.setSortable(true);
+		cellTable.addColumn(column_bydel, "Bydel");
+		cellTable.setColumnWidth(column_bydel, "25%");
 
 		// Connect the table to the data provider.
 		mState.dataProvider.addDataDisplay(cellTable);
-		ListHandler<Reg> columnSortHandler = new ListHandler<Reg>(mState.regs);
+		ListHandler<Reg> columnSortHandler = new ListHandler<Reg>(mState.getRegs());
 		columnSortHandler.setComparator(column_id, new Comparator<Reg>() {
 			@Override
 			public int compare(Reg o1, Reg o2) {
-				return o1.compareTo(o2, 0);
+				return o1.id - o2.id;
 			}
 		});
-
-		columnSortHandler.setComparator(column_2, new Comparator<Reg>() {
+		
+		columnSortHandler.setComparator(column_name, new Comparator<Reg>() {
 			@Override
 			public int compare(Reg o1, Reg o2) {
-				return o1.compareTo(o2, 1);
+				return o1.navn.compareToIgnoreCase(o2.navn);
+			}
+		});
+		column_name.setFieldUpdater(new FieldUpdater<Reg, String>() {
+			public void update(int index, Reg object, String value) {
+				object.navn = value;
 			}
 		});
 
 		columnSortHandler.setComparator(column_g, new Comparator<Reg>() {
 			@Override
 			public int compare(Reg o1, Reg o2) {
-				return o1.compareTo(o2, 2);
+				return o1.gruppe.compareToIgnoreCase(o2.gruppe);
+			}
+		});
+		column_g.setFieldUpdater(new FieldUpdater<Reg, String>() {
+			public void update(int index, Reg object, String value) {
+				object.gruppe = value;
 			}
 		});
 		
 		columnSortHandler.setComparator(column_k, new Comparator<Reg>() {
 			@Override
 			public int compare(Reg o1, Reg o2) {
-				return o1.compareTo(o2, 3);
+				return o1.kvarter.compareToIgnoreCase(o2.kvarter);
+			}
+		});
+		column_k.setFieldUpdater(new FieldUpdater<Reg, String>() {
+			public void update(int index, Reg object, String value) {
+				object.kvarter = value;
 			}
 		});
 		
-		columnSortHandler.setComparator(column_2, new Comparator<Reg>() {
+		columnSortHandler.setComparator(column_bydel, new Comparator<Reg>() {
 			@Override
 			public int compare(Reg o1, Reg o2) {
-				return o1.compareTo(o2, 4);
+				return o1.bydel.compareToIgnoreCase(o2.bydel);
+			}
+		});
+		column_bydel.setFieldUpdater(new FieldUpdater<Reg, String>() {
+			public void update(int index, Reg object, String value) {
+				object.bydel = value;
 			}
 		});
 
@@ -161,7 +177,7 @@ public class Registrering implements Content {
 		// We know that the data is sorted alphabetically by default.
 		cellTable.getColumnSortList().push(column_id);
 		
-		cellTable.setEmptyTableWidget(new Label("Tom tabel"));
+		cellTable.setEmptyTableWidget(new Label("Ingen tilmeldere!"));
 		
 		HorizontalPanel horizontalPanel = new HorizontalPanel();
 		horizontalPanel.setVerticalAlignment(HasVerticalAlignment.ALIGN_MIDDLE);
@@ -173,11 +189,9 @@ public class Registrering implements Content {
 
 		final TextBox txtbxNavn = new TextBox();
 
-		txtbxNavn.setText("Navn");
 		horizontalPanel.add(txtbxNavn);
 
 		final TextBox txtbxGruppe = new TextBox();
-		txtbxGruppe.setText("Gruppe");
 		horizontalPanel.add(txtbxGruppe);
 		
 		final TextBox txtbxKvarter = new TextBox();
@@ -210,13 +224,13 @@ public class Registrering implements Content {
 		final Button btnTifj = new Button("Tiføj");
 		btnTifj.addClickHandler(new ClickHandler() {
 			public void onClick(ClickEvent event) {
-				Reg reg = new Reg(mState.regs.size(), txtbxNavn.getText(),
+				Reg reg = new Reg(mState.getRegs().size(), txtbxNavn.getText(),
 						txtbxGruppe.getText(), txtbxKvarter.getText(), txtbxBydel.getText());
 				
 				mState.gruppeCtrl.put(txtbxGruppe.getText(), Pair.create(txtbxKvarter.getText(), txtbxBydel.getText()));
 				mState.kvarterCtrl.put(txtbxKvarter.getText(), txtbxBydel.getText());
 				
-				mState.regs.add(reg);
+				mState.getRegs().add(reg);
 				txtbxNavn.setText("");
 				txtbxGruppe.setText("");
 				txtbxKvarter.setText("");
@@ -243,7 +257,8 @@ public class Registrering implements Content {
 			}
 		});
 		horizontalPanel.add(btnTifj);
-
+		
+		
 		
 		return vp;
 	}

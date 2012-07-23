@@ -2,7 +2,11 @@ package dk.hitman.hitman2012.client;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 
 import org.vectomatic.dnd.DataTransferExt;
@@ -34,10 +38,6 @@ import com.google.gwt.user.client.ui.VerticalPanel;
 import com.google.gwt.view.client.ListDataProvider;
 
 import dk.hitman.hitman2012.shared.Pair;
-import com.google.gwt.event.dom.client.DragEnterHandler;
-import com.google.gwt.event.dom.client.DragEnterEvent;
-import com.google.gwt.event.dom.client.DragLeaveHandler;
-import com.google.gwt.event.dom.client.DragLeaveEvent;
 
 public class Spil implements Content {
 
@@ -73,15 +73,15 @@ public class Spil implements Content {
 			@Override
 			public void onClick(ClickEvent event) {
 				List<Integer> circle = new ArrayList<Integer>();
-				for (int i = 0; i < mState.regs.size(); i++)
+				for (int i = 0; i < mState.getRegs().size(); i++)
 					circle.add(i);
 				shuffle(circle);
 				mState.targets.clear();
-				for (int i = 0; i < mState.regs.size()-1; i++)
+				for (int i = 0; i < mState.getRegs().size()-1; i++)
 					mState.targets.put(circle.get(i), circle.get(i+1));
-				mState.targets.put(circle.get(mState.regs.size()-1), circle.get(0));
+				mState.targets.put(circle.get(mState.getRegs().size()-1), circle.get(0));
 				List<Pair<Integer,Integer>> data = new ArrayList<Pair<Integer,Integer>>();
-				for (int i = 0; i < mState.regs.size(); i++)
+				for (int i = 0; i < mState.getRegs().size(); i++)
 					data.add(Pair.create(i, mState.targets.get(i)));
 				dataProv.setList(data);
 			}
@@ -97,31 +97,54 @@ public class Spil implements Content {
 			public void onDrop(DropEvent event) {
 				FileList files = event.getDataTransfer().<DataTransferExt>cast().getFiles();
 				
-				final File file = files.getItem(0);
+				final LinkedList<File> fq = new LinkedList<File>();
+				for (File file : files) {
+					fq.add(file);
+					
+				}
+				Collections.sort(fq, new Comparator<File>() {
+					@Override
+					public int compare(File o1, File o2) {
+						return o1.getName().compareToIgnoreCase(o2.getName());
+					}
+				});
+				
+				final List<String> images = new ArrayList<String>();
 				
 				final FileReader reader = new FileReader();
 				reader.addLoadEndHandler(new LoadEndHandler() {
 					@Override
 					public void onLoadEnd(LoadEndEvent event) {
-						if (reader.getError() == null) {
-							Image image = createBitmapImage(reader, file);
-							vp.add(image);
+						images.add(createBitmapImage2(reader, fq.poll()));
+						if (fq.isEmpty()) {
+							createWindow(wrapBodyHtml(createBodyHtml(images)));
+						}
+						else {
+							File file = fq.peek();
+							if (file.getType().startsWith("image/")) {
+								reader.readAsBinaryString(file);
+							}
 						}
 					}
 				});
-				
+				File file = fq.peek();
 				if (file.getType().startsWith("image/")) {
-					GWT.log(file.toSource()+" "+file.toString()+" "+file.createObjectURL()+" "+file.getName()+" ");
-					
 					reader.readAsBinaryString(file);
 				}
-				
-				createWindow(createPrintHtml());
+				GWT.log("Drop it");
 				
 				event.stopPropagation();
 				event.preventDefault();
 			}
 		});
+		
+		Button btnAlfabetiskListe = new Button("Alfabetisk liste");
+		btnAlfabetiskListe.addClickHandler(new ClickHandler() {
+			public void onClick(ClickEvent event) {
+				createWindow(wrapBodyHtml(createAlphaList()));
+			}
+		});
+		horizontalPanel.add(btnAlfabetiskListe);
 		dp.addStyleName("gwt-DropPanel");
 		horizontalPanel.add(dp);
 		dp.setHeight("76px");
@@ -133,8 +156,8 @@ public class Spil implements Content {
 		CellList<Pair<Integer,Integer>> cellList = new CellList<Pair<Integer,Integer>>(new AbstractCell<Pair<Integer,Integer>>(){
 			@Override
 			public void render(Context context, Pair<Integer,Integer> value, SafeHtmlBuilder sb) {
-				String killer = mState.regs.get(value.left).navn;
-				String target = mState.regs.get(value.right).navn;
+				String killer = mState.getRegs().get(value.left).navn;
+				String target = mState.getRegs().get(value.right).navn;
 				sb.appendHtmlConstant("<span class='kill_pair'><span class='killer'>")
 					.appendEscaped(killer).appendHtmlConstant("</span><span class='target'>")
 					.appendEscaped(target).appendHtmlConstant("</span></span>");
@@ -147,10 +170,64 @@ public class Spil implements Content {
 		return vp;
 	}
 	
-	protected String createPrintHtml() {
-		return "<HTML><HEAD><TITLE>Print Mig</TITLE></HEAD><BODY>Hello, world!</BODY></HTML>";
+	protected String createAlphaList() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("<dl>");
+		List<Reg> regs = new ArrayList<Reg>(mState.getRegs());
+		Collections.sort(regs, new Comparator<Reg>() {
+			@Override
+			public int compare(Reg o1, Reg o2) {
+				return o1.navn.compareToIgnoreCase(o2.navn);
+			}
+		});
+		for (Reg r : regs) {
+			sb.append("<dt>").append(r.id).append("</dt>");
+			sb.append("<dd>").append(r.navn)
+				.append(" - ").append(r.gruppe)
+			.append("</dd>");
+		}
+		sb.append("</dl>");
+		return sb.toString();
 	}
-	
+
+	protected String wrapBodyHtml(String content) {
+		String style = "<style type='text/css'>" +
+				"img {height:114mm;}\n" +
+				"td { border:1px solid black; font-family:monospace; font-size:20pt}\n" +
+				"dt { clear: left; float: left;}\n" +
+				"dd { float: left;}\n" +
+				"</style>";
+		return "<HTML><HEAD>"+style+"<TITLE>Print Mig</TITLE></HEAD><BODY>"+content+"</BODY></HTML>";
+	}
+
+
+	protected String createBodyHtml(List<String> images) {
+		for (String s : images)
+			GWT.log(s);
+		StringBuilder sb = new StringBuilder();
+		sb.append("<table>");
+		for (int i = 0; i < mState.targets.size(); i++) {
+			String img;
+			if (mState.targets.get(i) < images.size())
+				img = images.get(mState.targets.get(i));
+			else img = "<div>No picture</div>";
+			Reg a = mState.getRegs().get(i);
+			Reg b = mState.getRegs().get(mState.targets.get(i));
+			sb.append("<tr><td>").append(img).append("</td><td>")
+				.append("Kendes under navnet:<br/>")
+				.append("<b>").append(b.navn).append("</b><br/>")
+				.append("<br/>")
+				.append("Forventet stamsted:<br/>")
+				.append("<b>").append(b.gruppe).append(", ").append(b.bydel).append(", ").append(b.kvarter).append("</b><br />")
+				.append("<br/>")
+				.append("Forventes dræbt af:<br/>")
+				.append("<b>").append(a.navn+" ("+a.id+")").append("</b><br />")
+				.append("</td></tr>");
+		}
+		sb.append("</table>");
+		//GWT.log(sb.toString());
+		return sb.toString();
+	}
 	
 	private Image createBitmapImage(FileReader reader, final File file) {
 		String result = reader.getStringResult();
@@ -170,6 +247,13 @@ public class Spil implements Content {
 		});
 		image.setUrl(url);
 		return image;			
+	}
+	private String createBitmapImage2(FileReader reader, File file) {
+		String result = reader.getStringResult();
+		String url = FileUtils.createDataUrl(file.getType(), result);
+		StringBuilder sb = new StringBuilder();
+		sb.append("<img src='").append(url).append("' />");
+		return sb.toString();			
 	}
 	
 	public static native void createWindow(String html) /*-{   

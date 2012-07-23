@@ -20,7 +20,7 @@ public class Tools {
 		});
 		dropPanel.addDragLeaveHandler(new DragLeaveHandler() {
 			public void onDragLeave(DragLeaveEvent event) {
-				setBorderColor(dropPanel, "red");
+				setBorderColor(dropPanel, "black");
 				dropPanel.removeStyleName("drag_hovered");
 				event.stopPropagation();
 				event.preventDefault();
@@ -28,7 +28,7 @@ public class Tools {
 		});
 		dropPanel.addDragEnterHandler(new DragEnterHandler() {
 			public void onDragEnter(DragEnterEvent event) {
-				setBorderColor(dropPanel, "black");
+				setBorderColor(dropPanel, "red");
 				dropPanel.addStyleName("drag_hovered");
 				event.stopPropagation();
 				event.preventDefault();

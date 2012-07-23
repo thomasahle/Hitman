@@ -72,3 +72,7 @@ content: " ➸ ";
 drag_hovered {
 border-color:blue;
 }
+.half_page {
+height:130mm;
+border:1px solid black;
+}

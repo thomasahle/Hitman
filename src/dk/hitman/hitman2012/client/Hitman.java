@@ -67,11 +67,12 @@ public class Hitman implements EntryPoint {
 		dropPanel.addDropHandler(new DropHandler() {
 			public void onDrop(DropEvent event) {
 				FileList files = event.getDataTransfer().<DataTransferExt>cast().getFiles();
+				
 				final FileReader reader = new FileReader();
 				reader.addLoadEndHandler(new LoadEndHandler() {
 					@Override
 					public void onLoadEnd(LoadEndEvent event) {
-						state.regs.addAll(fromCSV(reader.getStringResult()));
+						state.getRegs().addAll(fromCSV(reader.getStringResult()));
 					}
 				});
 				GWT.log("Got " + files.getLength() + " files.");
@@ -81,7 +82,7 @@ public class Hitman implements EntryPoint {
 							|| file.getType().equals("text/plain")
 							|| file.getType().equals("text/csv")
 							|| file.getType().equals("application/csv")) {
-						state.regs.clear();
+						state.getRegs().clear();
 						reader.readAsText(file);
 						break;
 					}
@@ -114,7 +115,7 @@ public class Hitman implements EntryPoint {
 	}
 
 	protected void downloadData() {
-		String data = URL.encode(toCSV(state.regs));
+		String data = URL.encode(toCSV(state.getRegs()));
 		String download_type;
 		if (Window.Navigator.getUserAgent().contains("Safari"))
 			download_type = "text/plain";
@@ -140,15 +141,22 @@ public class Hitman implements EntryPoint {
 		List<Reg> list = new ArrayList<Reg>();
 		for (String line : data.split("\n")) {
 			String[] parts = line.split(",");
+			int l = parts.length;
 			if (parts.length >= 5 && parts[0].matches("\\d+")) {
-				String navn = parts[1].trim();
-				String gruppe = parts[2].trim();
-				String kvarter = parts[3].trim();
-				String ulejr = parts[4].trim();
-				list.add(new Reg(Integer.parseInt(parts[0].trim()),
+				String ulejr = parts[--l].trim();
+				String kvarter = parts[--l].trim();
+				String gruppe = parts[--l].trim();
+				String navn = parts[--l].trim();
+				while (l > 1)
+					navn = parts[--l].trim() +", "+ navn;
+				
+				list.add(new Reg(list.size(),
 						navn, gruppe, kvarter, ulejr));
 				state.gruppeCtrl.put(gruppe, Pair.create(kvarter, ulejr));
 				state.kvarterCtrl.put(kvarter, ulejr);
+			}
+			else {
+				GWT.log("ERROR!!!" +" "+line);
 			}
 		}
 		return list;
